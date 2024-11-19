@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 const Transactions = ({ updateSummary }) => {
-    const [transactions, setTransactions] = useState([]);
+    const [transactions, setTransactions] = useState([]); // Asegura que sea un arreglo
     const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         type: "",
@@ -21,8 +21,15 @@ const Transactions = ({ updateSummary }) => {
     useEffect(() => {
         fetch("http://localhost:5000/api/transactions")
             .then((res) => res.json())
-            .then((data) => setTransactions(data))
-            .catch((err) => console.error(err));
+            .then((data) => {
+                if (Array.isArray(data)) {
+                    setTransactions(data); // Asegura que solo se asignen arreglos
+                } else {
+                    console.error("Los datos recibidos no son un arreglo:", data);
+                    setTransactions([]); // Si no es un arreglo, inicializa vacío
+                }
+            })
+            .catch((err) => console.error("Error al cargar transacciones:", err));
     }, []);
 
     // Actualizar categorías según el tipo seleccionado
@@ -50,11 +57,15 @@ const Transactions = ({ updateSummary }) => {
         })
             .then((res) => res.json())
             .then((data) => {
-                setTransactions([...transactions, data]);
-                updateSummary(); // Actualiza el resumen financiero
-                setFormData({ type: "", category: "", amount: "", note: "" });
+                if (data && typeof data === "object") {
+                    setTransactions([...transactions, data]);
+                    updateSummary(); // Actualiza el resumen financiero
+                    setFormData({ type: "", category: "", amount: "", note: "" });
+                } else {
+                    console.error("La respuesta del servidor no es válida:", data);
+                }
             })
-            .catch((err) => console.error(err));
+            .catch((err) => console.error("Error al agregar transacción:", err));
     };
 
     return (
@@ -129,14 +140,22 @@ const Transactions = ({ updateSummary }) => {
                     </tr>
                 </thead>
                 <tbody>
-                    {transactions.map((tx, index) => (
-                        <tr key={index} className="text-center">
-                            <td className="border px-4 py-2">{tx.type || "N/A"}</td>
-                            <td className="border px-4 py-2">{tx.category || "N/A"}</td>
-                            <td className="border px-4 py-2">${tx.amount?.toFixed(2) || "0.00"}</td>
-                            <td className="border px-4 py-2">{tx.note || "N/A"}</td>
+                    {transactions.length > 0 ? (
+                        transactions.map((tx, index) => (
+                            <tr key={index} className="text-center">
+                                <td className="border px-4 py-2">{tx.type || "N/A"}</td>
+                                <td className="border px-4 py-2">{tx.category || "N/A"}</td>
+                                <td className="border px-4 py-2">${tx.amount?.toFixed(2) || "0.00"}</td>
+                                <td className="border px-4 py-2">{tx.note || "N/A"}</td>
+                            </tr>
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="4" className="text-center p-4">
+                                No hay transacciones disponibles.
+                            </td>
                         </tr>
-                    ))}
+                    )}
                 </tbody>
             </table>
         </div>
